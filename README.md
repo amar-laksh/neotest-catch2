@@ -16,21 +16,11 @@ Using packer:
 
 ```lua
 use({
-  'nvim-neotest/neotest',
-  requires = {
-    'amar-laksh/neotest-catch2',
-  }
-  config = function()
-    require('neotest').setup({
-      ...,
-      adapters = {
-        require('neotest-catch2'),
-      }
-    })
-  end
-})
+  'amar-laksh/neotest-catch2',
+  requires = { "nvim-neotest/neotest" }
+  })
 ```
-## Note:
+## Configuration
 Checkout out my config to understand how to set it up: [My config](https://github.com/amar-laksh/neovim-config/blob/main/lua/plugins/nvim-test.lua#L31)
 
 ## TODO
