@@ -3,4 +3,4 @@ exampleProject/Testing
 .ccls
 .ccls-cache
 *.luarc.json*
-
+*/compile_commands.json
