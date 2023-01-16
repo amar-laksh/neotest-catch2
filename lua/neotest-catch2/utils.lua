@@ -138,12 +138,12 @@ end
 
 --- Provides the runner for the unit test
 ---@param path string
----@param build_prefixes Table
+---@param build_prefixes any
 ---@return string
 function M.get_runner(path, build_prefixes)
     -- TODO: apply some criteria to select the correct runner, maybe CMAKE?
     local runners = M.get_runners(path, lib.files.match_root_pattern(
-        build_prefixes[1]
+        build_prefixes
     )(path), build_prefixes
     ) or error("Cannot find runners", 0)
     return runners[1]
