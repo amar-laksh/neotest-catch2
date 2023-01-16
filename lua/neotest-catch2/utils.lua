@@ -3,6 +3,71 @@ local lib = require("neotest.lib")
 local bit = require('bit')
 local M = {}
 
+---- Helper functions start
+function M.is_executable(file)
+    if bit.band(bit.tobit(100), bit.tobit(file:_st_mode())) == 100 then
+        return true
+    end
+    return false
+end
+
+function M.replace(str, what, with)
+    what = string.gsub(what, "[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1") -- escape pattern
+    with = string.gsub(with, "[%%]", "%%%%") -- escape replacement
+    return string.gsub(str, what, with)
+end
+
+function M.escape_special_chars(str)
+    str = str:gsub(",", "\\%1")
+    str = str:gsub("%[", "\\[")
+    return str
+end
+
+function M.unescape_special_chars(str)
+    str = M.escape_special_chars(str)
+    str = str:gsub("\"", "\\%1")
+    return str
+end
+
+function M.into_iter(table)
+    local iterable = {}
+    if #table == 0 then
+        iterable = { table }
+    else
+        iterable = table
+    end
+    return iterable
+end
+
+function M.contains(table, key)
+    for _, element in ipairs(table) do
+        if element[key] ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
+function M.merge_tables(t1, t2)
+    -- We merge the two tables and overwrite duplicate elements
+    for k, v in pairs(t1) do t2[k] = v end
+    return t2
+end
+
+local function add_catch2_prefixes(kind, name)
+    if (kind == "SCENARIO") then
+        name = "Scenario: " .. name
+    elseif (kind == "GIVEN") then
+        name = "Given: " .. name
+    elseif (kind == "WHEN") then
+        name = "When: " .. name
+    elseif (kind == "THEN") then
+        name = "Then: " .. name
+    end
+    return name
+end
+
+---- Helper functions ends
 
 M.test_extensions = {
     ["cpp"] = true,
@@ -40,6 +105,11 @@ function M.get_match_type(captured_nodes)
     end
 end
 
+--- Provides a list of files/directories in the root path
+---@param path string
+---@param root string | nil
+---@param build_prefixes Table
+---@return string[]
 function M.get_runners(path, root, build_prefixes)
     local runners = {}
     if (root ~= nil) then
@@ -66,26 +136,17 @@ function M.get_runners(path, root, build_prefixes)
     return runners
 end
 
+--- Provides the runner for the unit test
+---@param path string
+---@param build_prefixes Table
+---@return string
 function M.get_runner(path, build_prefixes)
     -- TODO: apply some criteria to select the correct runner, maybe CMAKE?
     local runners = M.get_runners(path, lib.files.match_root_pattern(
-        build_prefixes
+        build_prefixes[1]
     )(path), build_prefixes
-    )
+    ) or error("Cannot find runners", 0)
     return runners[1]
-end
-
-function M.is_executable(file)
-    if bit.band(bit.tobit(100), bit.tobit(file:_st_mode())) == 100 then
-        return true
-    end
-    return false
-end
-
-function M.replace(str, what, with)
-    what = string.gsub(what, "[%(%)%.%+%-%*%?%[%]%^%$%%]", "%%%1") -- escape pattern
-    with = string.gsub(with, "[%%]", "%%%%") -- escape replacement
-    return string.gsub(str, what, with)
 end
 
 ---@async
@@ -111,20 +172,9 @@ function M.is_test_file(file_path, test_suffixes)
     return result
 end
 
-function M.escape_special_chars(str)
-    str = str:gsub(",", "\\%1")
-    str = str:gsub("%[", "\\[")
-    return str
-end
-
-function M.unescape_special_chars(str)
-    str = M.escape_special_chars(str)
-    str = str:gsub("\"", "\\%1")
-    return str
-end
-
--- @param position neotest.Tree position to create a filter to
--- @returns string
+--- Provides filter names from the test using the test tree
+---@param tree neotest.Tree
+---@return string
 function M.positions2filter(tree)
     local data = tree:data()
     local type = data.type
@@ -144,20 +194,13 @@ function M.positions2filter(tree)
     end
 end
 
-local function add_catch2_prefixes(kind, name)
-    if (kind == "SCENARIO") then
-        name = "Scenario: " .. name
-    elseif (kind == "GIVEN") then
-        name = "Given: " .. name
-    elseif (kind == "WHEN") then
-        name = "When: " .. name
-    elseif (kind == "THEN") then
-        name = "Then: " .. name
-    end
-    return name
-end
-
+--- Callback function to build test tree by parsing catch2 structures
+---@param file_path string
+---@param source any
+---@param captured_nodes any
+---@return table
 function M.build_positions_tree(file_path, source, captured_nodes)
+    local tree = {}
     local match_type = M.get_match_type(captured_nodes)
     if match_type then
         local name = vim.treesitter.get_node_text(captured_nodes[match_type .. ".name"], source)
@@ -173,7 +216,7 @@ function M.build_positions_tree(file_path, source, captured_nodes)
         end
 
         name = M.escape_special_chars(add_catch2_prefixes(kind, name))
-        return {
+        tree = {
             type = match_type,
             path = file_path,
             name = name,
@@ -182,27 +225,15 @@ function M.build_positions_tree(file_path, source, captured_nodes)
             kind = kind
         }
     end
+    return tree
 end
 
-function M.into_iter(table)
-    local iterable = {}
-    if #table == 0 then
-        iterable = { table }
-    else
-        iterable = table
-    end
-    return iterable
-end
-
-function M.contains(table, node)
-    for _, element in ipairs(table) do
-        if element[node] ~= nil then
-            return true
-        end
-    end
-    return false
-end
-
+--- Extracts results from the test results
+---@param spec neotest.RunSpec
+---@param result neotest.StrategyResult
+---@param testcases table
+---@param main_filter string?
+---@return Table
 function M.extract_results(spec, result, testcases, main_filter)
     local results = {}
     for _, testcase in ipairs(testcases) do
@@ -229,11 +260,14 @@ function M.extract_results(spec, result, testcases, main_filter)
             }
         end
     end
-
     return results
 end
 
----@return table?
+--- Provides appropriate strategy according to user choice
+---@param strategy string
+---@param path string
+---@param test_args neotest.RunArgs
+---@param dap_adapter string
 function M.get_strategy_config(strategy, path, test_args, dap_adapter)
     local config = {
         dap = function()
@@ -254,12 +288,6 @@ function M.get_strategy_config(strategy, path, test_args, dap_adapter)
     if config[strategy] then
         return config[strategy]()
     end
-end
-
-function M.merge_tables(t1, t2)
-    -- We merge the two tables and overwrite duplicate elements
-    for k, v in pairs(t1) do t2[k] = v end
-    return t2
 end
 
 return M

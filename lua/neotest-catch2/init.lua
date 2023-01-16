@@ -3,6 +3,9 @@ local lib = require("neotest.lib")
 local xml = require("neotest.lib.xml")
 local async = require("neotest.async")
 local Path = require("plenary.path").path
+
+---@class neotest.Adapter
+---@field name string
 local Adapter = { name = "neotest-catch2" }
 
 local get_args = function()
@@ -25,7 +28,7 @@ function Adapter.root(dir)
     return root
 end
 
---@async
+---@async
 ---@param file_path string
 ---@return boolean
 function Adapter.is_test_file(file_path)
@@ -61,7 +64,7 @@ function Adapter.build_spec(args)
         error("Did not run tests: no tests selected to run")
     end
 
-    local buildPrefix = (get_args().buildPrefixes) or "build"
+    local buildPrefix = (get_args().buildPrefixes) or { "build" }
 
     local runner = get_args().runner or utils.get_runner(path, buildPrefix)
     if (not runner) then
@@ -87,7 +90,6 @@ function Adapter.build_spec(args)
         vim.list_extend(get_args(), args.extra_args or {})
     }), " ")
     -- print("running command:", command)
-    -- TODO:: add args for dap adapter name
     local strategy_config = utils.get_strategy_config(args.strategy, runner, test_args, "lldb")
     return { command = command,
         context = { results_path = results_path }, cwd = root, strategy = strategy_config }
@@ -97,7 +99,7 @@ end
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
 ---@param _ neotest.Tree
----@return neotest.Result[]
+---@return table<string, neotest.Result>
 function Adapter.results(spec, result, _)
     vim.loop.sleep(5)
     local success, data = pcall(lib.files.read, spec.context.results_path)
