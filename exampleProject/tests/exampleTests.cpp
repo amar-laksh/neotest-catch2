@@ -23,7 +23,7 @@ TEST_CASE("test case with: / \" , [] that fails", "[specialCharTestFails]") {
 
 TEST_CASE("test case with multiple checks passes",
           "[multipleChecksTestPasses]") {
-  CHECK(Fibonacci(2) != 0);
+  CHECK(Fibonacci(3) != 0);
   REQUIRE(1 == 1);
 }
 
