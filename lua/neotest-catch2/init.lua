@@ -67,10 +67,11 @@ function Adapter.build_spec(args)
     local buildPrefix = (get_args().buildPrefixes) or { "build" }
 
     local runner = get_args().runner or utils.get_runner(path, buildPrefix)
+    runner = (get_args().runnerPrefix or "") .. runner
     if (not runner) then
         error("I couldn't find any test executable runner!")
     end
-    local target = vim.split(runner, Path.sep)
+    local target = vim.split(runner, Path.sep, {})
     target = target[#target]
     local temp_dir = async.fn.tempname()
     local results_path = temp_dir .. "test_result.xml"
@@ -87,7 +88,7 @@ function Adapter.build_spec(args)
         buildCommand,
         runner,
         test_args,
-        vim.list_extend(get_args(), args.extra_args or {})
+        vim.list_extend(get_args(), args.extra_args or {}, 1, #get_args())
     }), " ")
     -- print("running command:", command)
     local strategy_config = utils.get_strategy_config(args.strategy, runner, test_args, "lldb")
