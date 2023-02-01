@@ -1,6 +1,7 @@
 local utils = require("neotest-catch2.utils")
 local lib = require("neotest.lib")
 local xml = require("neotest.lib.xml")
+local xml_tree = require("neotest.lib.xml.tree")
 local async = require("neotest.async")
 local Path = require("plenary.path").path
 
@@ -73,7 +74,7 @@ function Adapter.build_spec(args)
     end
     local target = vim.split(runner, Path.sep, {})
     target = target[#target]
-    local temp_dir = async.fn.tempname()
+    local temp_dir = get_args().tempDir or (async.fn.tempname() .. "/")
     local results_path = temp_dir .. "test_result.xml"
     local buildCommand = ""
     if get_args().buildCommandFn ~= nil then
@@ -91,7 +92,8 @@ function Adapter.build_spec(args)
         vim.list_extend(get_args(), args.extra_args or {}, 1, #get_args())
     }), " ")
     -- print("running command:", command)
-    local strategy_config = utils.get_strategy_config(args.strategy, runner, test_args, "lldb")
+    -- print("current strategy: ", args.strategy)
+    local strategy_config = utils.get_strategy_config(args.strategy, runner, get_args().strategyConfig, "lldb")
     return { command = command,
         context = { results_path = results_path }, cwd = root, strategy = strategy_config }
 end
@@ -102,16 +104,19 @@ end
 ---@param _ neotest.Tree
 ---@return table<string, neotest.Result>
 function Adapter.results(spec, result, _)
-    vim.loop.sleep(5)
     local success, data = pcall(lib.files.read, spec.context.results_path)
     if not success then
         error("the runner command failed!")
-        error(data)
         return {}
     end
     local results = {}
     local section_results = {}
-    local handler = xml.parse(data)
+
+    local handler = xml_tree:new()
+    local parser = xml.parser(handler)
+    parser:parse(data)
+    handler = handler.root
+
     local testcases = utils.into_iter(handler.Catch.Group.TestCase)
     for _, testcase in ipairs(testcases) do
         if testcase.Section ~= nil then
