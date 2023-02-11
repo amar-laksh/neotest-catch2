@@ -1,7 +1,6 @@
 local utils = require("neotest-catch2.utils")
 local lib = require("neotest.lib")
 local xml = require("neotest.lib.xml")
-local xml_tree = require("neotest.lib.xml.tree")
 local async = require("neotest.async")
 local Path = require("plenary.path").path
 
@@ -112,11 +111,7 @@ function Adapter.results(spec, result, _)
     local results = {}
     local section_results = {}
 
-    local handler = xml_tree:new()
-    local parser = xml.parser(handler)
-    parser:parse(data)
-    handler = handler.root
-
+    local handler = xml.parse(data)
     local testcases = utils.into_iter(handler.Catch.Group.TestCase)
     for _, testcase in ipairs(testcases) do
         if testcase.Section ~= nil then
