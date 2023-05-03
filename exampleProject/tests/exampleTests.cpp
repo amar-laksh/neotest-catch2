@@ -2,6 +2,10 @@
 #include <cstdint>
 
 std::uint64_t Fibonacci(std::uint64_t number) {
+  int a = 0;
+  auto b = 0.1f;
+  printf("%d", a);
+  printf("%f", b);
   return number < 2 ? 1 : Fibonacci(number - 1) + Fibonacci(number - 2);
 }
 
