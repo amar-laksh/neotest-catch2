@@ -92,7 +92,7 @@ function Adapter.build_spec(args)
     }), " ")
     -- print("running command:", command)
     -- print("current strategy: ", args.strategy)
-    local strategy_config = utils.get_strategy_config(args.strategy, runner, get_args().strategyConfig, "lldb")
+    local strategy_config = utils.get_strategy_config(args.strategy, test_args, runner, get_args().strategyConfig, "lldb")
     return { command = command,
         context = { results_path = results_path }, cwd = root, strategy = strategy_config }
 end
@@ -105,7 +105,7 @@ end
 function Adapter.results(spec, result, _)
     local success, data = pcall(lib.files.read, spec.context.results_path)
     if not success then
-        error("the runner command failed!")
+        error("the runner command(" .. spec.command .. ") failed!")
         return {}
     end
     local results = {}

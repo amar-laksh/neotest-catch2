@@ -266,9 +266,10 @@ end
 --- Provides appropriate strategy according to user choice
 ---@param strategy string
 ---@param path string
+---@param test_args Table
 ---@param args neotest.RunArgs
 ---@param dap_adapter string
-function M.get_strategy_config(strategy, path, args, dap_adapter)
+function M.get_strategy_config(strategy, test_args, path, args, dap_adapter)
     local config = {
         dap = function()
             local status_ok, _ = pcall(require, 'dap')
@@ -281,7 +282,7 @@ function M.get_strategy_config(strategy, path, args, dap_adapter)
                 request = 'launch',
                 program = path,
                 stopOnEntry = false,
-                -- args = test_args,
+                args = test_args,
             }
             local conf = M.merge_tables(c, args or {})
             return conf
