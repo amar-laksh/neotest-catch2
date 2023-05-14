@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
-find_package(Catch2 2 REQUIRED)
-include(CTest)
-add_executable(exampleTests exampleTests.cpp tests-main.cpp)
-target_link_libraries(exampleTests PRIVATE Catch2::Catch2)
-add_test(exampleTests exampleTests)
-
+find_package(Catch2 REQUIRED)
+add_executable(${PROJECT_NAME}-tests tests.cpp)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2)
+include_directories(../src/include)
+add_test(${PROJECT_NAME}-tests ${PROJECT_NAME}-tests)
