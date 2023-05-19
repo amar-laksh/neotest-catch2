@@ -81,8 +81,7 @@ function Adapter.build_spec(args)
     end
     local test_args = {
         "-r", "xml",
-        "-o", results_path, filters,
-        "--use-colour", "yes"
+        "-o", results_path, filters
     }
     local command = table.concat(vim.tbl_flatten({
         buildCommand,
