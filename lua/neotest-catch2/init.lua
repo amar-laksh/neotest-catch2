@@ -111,13 +111,15 @@ function Adapter.results(spec, result, _)
     local section_results = {}
 
     local handler = xml.parse(data)
-    local testcases = utils.into_iter(handler.Catch.Group.TestCase)
+    local testcases = utils.into_iter(handler.Catch2TestRun.TestCase)
     for _, testcase in ipairs(testcases) do
-        if testcase.Section ~= nil then
+        local testCaseName = testcase._attr.name
+        if testcase.Expression ~= nil then
+            results = utils.fill_result(testcase, utils.unescape_special_chars(testCaseName), spec, result)
+        elseif testcase.Section ~= nil then
             section_results = utils.extract_results(spec, result, utils.into_iter(testcase.Section),
-                utils.unescape_special_chars(testcase._attr.name))
-        else
-            results = utils.extract_results(spec, result, utils.into_iter(testcase))
+                utils.unescape_special_chars(testCaseName)
+            )
         end
         results = utils.merge_tables(results, section_results)
     end

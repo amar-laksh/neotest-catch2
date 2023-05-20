@@ -67,6 +67,16 @@ local function add_catch2_prefixes(kind, name)
     return name
 end
 
+function M.concat_tables(t1, t2)
+    if #t1 == 0 then
+        return t2
+    end
+    for i = 1, #t2 do
+        t1[#t1 + 1] = t2[i]
+    end
+    return t1
+end
+
 ---- Helper functions ends
 
 M.test_extensions = {
@@ -231,35 +241,43 @@ end
 --- Extracts results from the test results
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
----@param testcases table
----@param main_filter string?
+---@param testcases Table
+---@param main_filter Table
 ---@return Table
 function M.extract_results(spec, result, testcases, main_filter)
     local results = {}
+    local last = {}
     for _, testcase in ipairs(testcases) do
         local filter = main_filter or M.unescape_special_chars(testcase._attr.name)
-        if testcase.Expression ~= nil then
-            local expressions = M.into_iter(testcase.Expression)
-            local errors = {}
-            for idx, expression in ipairs(expressions) do
-                local line = tonumber(expression._attr.line)
-                local message = "\nOriginal: " ..
-                    expression.Original .. "\nExpanded: " .. expression.Expanded
-                errors[idx] = { message = message, line = line - 1 }
-                results[filter] = {
-                    status = "failed",
-                    short = message,
-                    output = spec.context.results_path,
-                }
-            end
-            results[filter].errors = errors
-        else
+        local current = M.fill_result(testcase, filter, spec, result)
+        results = M.concat_tables(results, current)
+    end
+    return results
+end
+
+function M.fill_result(testcase, filter, spec, result)
+    local results = {}
+    local errors = {}
+    if testcase.Expression ~= nil then
+        local expressions = M.into_iter(testcase.Expression)
+        for idx, expression in ipairs(expressions) do
+            local line = tonumber(expression._attr.line)
+            local message = "\nOriginal: " ..
+                expression.Original .. "\nExpanded: " .. expression.Expanded
+            errors[idx] = { message = message, line = line - 1 }
             results[filter] = {
-                status = "passed",
-                output = result.output
+                status = "failed",
+                short = message,
+                output = spec.context.results_path,
             }
         end
+    else
+        results[filter] = {
+            status = "passed",
+            output = result.output
+        }
     end
+    results[filter].errors = errors
     return results
 end
 
